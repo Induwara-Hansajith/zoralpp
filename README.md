@@ -1,2 +1,0 @@
-# zoralpp
-networking projectt2
