@@ -1,134 +1,1632 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
-    <title>SyncSpace - Notion x Discord UI</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SyncSpace AI — Notion × Discord Collaborative Workspace</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        discord: {
+                            rail: '#111214',
+                            sidebar: '#1e1f22',
+                            channel: '#2b2d31',
+                            chat: '#313338',
+                            hover: '#35373c',
+                            active: '#404249',
+                            border: '#1f2023',
+                            blurple: '#5865F2',
+                            blurpleHover: '#4752C4',
+                            green: '#23a55a',
+                            yellow: '#f0b232',
+                        },
+                        notion: {
+                            bg: '#191919',
+                            surface: '#202020',
+                            callout: '#25262b',
+                            border: '#2f3037',
+                            text: '#e3e3e1',
+                            muted: '#9b9a97',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
     <style>
-        body { background-color: #1e1f22; color: #dbdee1; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .server-sidebar { background-color: #111214; }
-        .channel-sidebar { background-color: #2b2d31; }
-        .main-content { background-color: #313338; }
-        .notion-card { background-color: #2b2d31; border: 1px solid #3f4147; }
+        /* Custom Scrollbars for sleek dark UI */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #3f4147;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #5865F2;
+        }
+
+        /* Server Pill Animation */
+        .server-icon-wrapper .server-pill {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .server-icon-wrapper:hover .server-pill {
+            height: 20px;
+        }
+        .server-icon-wrapper.active .server-pill {
+            height: 36px;
+        }
+
+        /* Subtle pulse for AI thinking state */
+        @keyframes pulseGlow {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(0.98); }
+        }
+        .ai-thinking {
+            animation: pulseGlow 1.5s infinite ease-in-out;
+        }
+
+        /* Notion Editable Content Placeholder */
+        [contenteditable]:empty:before {
+            content: attr(data-placeholder);
+            color: #6b7280;
+            pointer-events: none;
+        }
     </style>
 </head>
-<body class="flex h-screen overflow-hidden">
+<body class="bg-discord-chat text-[#dbdee1] font-sans h-screen w-screen overflow-hidden flex flex-col select-none">
 
-    <!-- 1. Discord-Style Server / Workspace Bar -->
-    <aside class="server-sidebar w-18 flex flex-col items-center py-4 space-y-4 z-10">
-        <div class="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center font-bold text-white text-xl cursor-pointer hover:rounded-xl transition-all shadow-lg">
-            SS
+    <!-- TOP SYSTEM ARCHITECTURE TELEMETRY BAR -->
+    <div class="h-8 bg-[#111214] border-b border-[#222327] px-3 flex items-center justify-between text-[11px] font-mono z-30 shrink-0">
+        <div class="flex items-center space-x-3 overflow-x-auto no-scrollbar">
+            <div class="flex items-center space-x-1.5 text-white font-semibold">
+                <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>SYNCSPACE MICROSERVICES</span>
+            </div>
+            <span class="text-zinc-600">|</span>
+            <div class="flex items-center space-x-1 text-zinc-400">
+                <span class="text-indigo-400 font-semibold">ai-service:8083</span>
+                <span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-1.5 py-0.2 rounded text-[10px]">Spring AI 2.0.2</span>
+            </div>
+            <span class="text-zinc-600 hidden sm:inline">|</span>
+            <div class="hidden sm:flex items-center space-x-1 text-zinc-400">
+                <span class="text-sky-400">pgvector:5434</span>
+                <span class="text-zinc-500">(vector_store)</span>
+            </div>
+            <span class="text-zinc-600 hidden md:inline">|</span>
+            <div class="hidden md:flex items-center space-x-1 text-zinc-400">
+                <span class="text-amber-400">ollama:11434</span>
+                <span class="text-zinc-500">(qwen2.5:1.5b + nomic-embed)</span>
+            </div>
         </div>
-        <div class="w-8 h-[2px] bg-[#35363c] rounded"></div>
-        <!-- Workspace Icons -->
-        <div class="w-12 h-12 bg-[#35363c] hover:bg-indigo-500 hover:rounded-2xl rounded-3xl flex items-center justify-center text-white cursor-pointer transition-all">
-            🚀
-        </div>
-        <div class="w-12 h-12 bg-[#35363c] hover:bg-emerald-500 hover:rounded-2xl rounded-3xl flex items-center justify-center text-white cursor-pointer transition-all">
-            📝
-        </div>
-    </aside>
 
-    <!-- 2. Notion-Style Page / Channel Sidebar -->
-    <aside class="channel-sidebar w-64 flex flex-col border-r border-[#1f2023]">
-        <div class="p-4 font-bold text-white border-b border-[#1f2023] flex justify-between items-center">
-            <span>Workspace Alpha</span>
-            <span class="text-xs bg-[#35363c] px-2 py-1 rounded text-zinc-400">v2.1</span>
+        <div class="flex items-center space-x-2 shrink-0">
+            <!-- Connection Mode Selector -->
+            <div class="flex items-center bg-[#1e1f22] border border-[#2f3136] rounded px-2 py-0.5 space-x-1.5">
+                <span class="text-zinc-400">Mode:</span>
+                <select id="connectionModeSelect" onchange="handleConnectionModeChange(this.value)" class="bg-transparent text-indigo-300 font-semibold focus:outline-none cursor-pointer">
+                    <option value="auto" class="bg-[#1e1f22] text-white">Auto (localhost:8083 ➔ Smart RAG)</option>
+                    <option value="live" class="bg-[#1e1f22] text-white">Force Live (localhost:8083)</option>
+                    <option value="simulated" class="bg-[#1e1f22] text-white">In-Browser RAG Engine</option>
+                </select>
+            </div>
+
+            <button onclick="checkActuatorHealth()" class="bg-[#2b2d31] hover:bg-[#35373c] text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded flex items-center space-x-1 transition-colors" title="Ping GET http://localhost:8083/actuator/health">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <span id="actuatorBadgeText">Actuator: UP</span>
+            </button>
+
+            <button onclick="toggleInspectorDrawer()" class="bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/40 px-2 py-0.5 rounded flex items-center space-x-1 transition-colors">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                <span>Feign / cURL Logs (<span id="apiLogCount">3</span>)</span>
+            </button>
         </div>
-        <div class="flex-1 overflow-y-auto p-3 space-y-1 text-sm">
-            <div class="text-xs font-semibold text-zinc-400 uppercase tracking-wider px-2 py-1">Chat Rooms</div>
-            <div class="px-2 py-1.5 rounded hover:bg-[#35373c] text-zinc-300 cursor-pointer flex items-center space-x-2">
-                <span>#</span> <span>general-backend</span>
+    </div>
+
+    <!-- MAIN 3-PANE WORKSPACE CONTAINER -->
+    <div class="flex-1 flex overflow-hidden relative">
+
+        <!-- 1. FAR-LEFT DISCORD SERVER / WORKSPACE RAIL -->
+        <nav class="w-[72px] bg-discord-rail flex flex-col items-center py-3 space-y-2 shrink-0 z-20 border-r border-[#1a1b1e]">
+            <!-- Brand Home Logo -->
+            <div class="relative flex items-center justify-center w-full server-icon-wrapper active" id="rail-brand">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-violet-700 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-indigo-600/20 cursor-pointer hover:rounded-xl transition-all" onclick="switchWorkspace('ws-alpha')" title="SyncSpace AI Platform">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                </div>
             </div>
-            <div class="px-2 py-1.5 rounded hover:bg-[#35373c] text-zinc-300 cursor-pointer flex items-center space-x-2">
-                <span>#</span> <span>ai-command-room</span>
+
+            <div class="w-8 h-[2px] bg-[#2b2d31] rounded-full my-1"></div>
+
+            <!-- Dynamic Workspace Icons -->
+            <div id="workspaceRailList" class="flex flex-col items-center space-y-2.5 w-full">
+                <!-- Populated by JS -->
             </div>
+
+            <!-- Add Workspace / Quick Test Trigger -->
+            <button onclick="openArchitectureModal()" class="w-12 h-12 rounded-[24px] hover:rounded-[16px] bg-[#2b2d31] hover:bg-emerald-600 text-emerald-400 hover:text-white flex items-center justify-center transition-all group mt-2" title="View Microservice Architecture & Strategy Pattern">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                </svg>
+            </button>
+
+            <div class="flex-1"></div>
+
+            <!-- Bottom User Avatar & Inspector Button -->
+            <div class="flex flex-col items-center space-y-3 pb-1">
+                <button onclick="toggleInspectorDrawer()" class="w-10 h-10 rounded-xl bg-[#2b2d31] hover:bg-indigo-600 text-zinc-400 hover:text-white flex items-center justify-center transition-colors relative" title="Open OpenFeign & cURL Network Inspector">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
+                    <span class="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
+                </button>
+                <div class="relative group cursor-pointer" title="Induwara (AI & Vector RAG Lead)">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white font-bold text-xs shadow">
+                        IH
+                    </div>
+                    <span class="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-[#111214]"></span>
+                </div>
+            </div>
+        </nav>
+
+        <!-- 2. SECONDARY SIDEBAR (CHANNELS + NOTION PAGES) -->
+        <aside id="secondarySidebar" class="w-64 bg-discord-channel flex flex-col border-r border-discord-border shrink-0 select-none z-10 transition-all">
+            <!-- Workspace Header -->
+            <div class="h-12 px-4 border-b border-discord-border flex items-center justify-between hover:bg-discord-hover cursor-pointer transition-colors" onclick="openArchitectureModal()">
+                <div class="truncate">
+                    <h2 id="activeWorkspaceName" class="font-bold text-white text-sm tracking-tight truncate">SyncSpace Core</h2>
+                    <div class="flex items-center space-x-1.5 text-[10px] font-mono text-zinc-400">
+                        <span id="activeWorkspaceIdBadge">ws-alpha</span>
+                        <span>•</span>
+                        <span id="indexedCountBadge" class="text-emerald-400">3 notes in pgvector</span>
+                    </div>
+                </div>
+                <svg class="w-4 h-4 text-zinc-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+            </div>
+
+            <!-- Sidebar Scrollable Navigation -->
+            <div class="flex-1 overflow-y-auto px-2 py-3 space-y-5">
+                
+                <!-- SECTION 1: DISCORD CHAT CHANNELS (chat-service) -->
+                <div>
+                    <div class="px-2 mb-1.5 flex items-center justify-between">
+                        <span class="text-[11px] font-bold uppercase tracking-wider text-zinc-400 flex items-center space-x-1">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            <span>Chat Rooms (chat-service)</span>
+                        </span>
+                    </div>
+                    <div id="channelListContainer" class="space-y-0.5">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- SECTION 2: NOTION WORKSPACE PAGES (note-service -> pgvector) -->
+                <div>
+                    <div class="px-2 mb-1.5 flex items-center justify-between">
+                        <span class="text-[11px] font-bold uppercase tracking-wider text-zinc-400 flex items-center space-x-1">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            <span>Workspace Notes (RAG)</span>
+                        </span>
+                        <button onclick="createNewNotePage()" class="text-zinc-400 hover:text-white p-0.5 rounded hover:bg-[#3f4147] transition-colors" title="Create New Notion Page">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        </button>
+                    </div>
+                    <div id="noteListContainer" class="space-y-0.5">
+                        <!-- Populated by JS -->
+                    </div>
+                    <button onclick="createNewNotePage()" class="mt-1.5 w-full px-2 py-1.5 rounded text-xs text-zinc-400 hover:text-zinc-200 hover:bg-discord-hover flex items-center space-x-2 transition-colors">
+                        <svg class="w-3.5 h-3.5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        <span>New Workspace Page</span>
+                    </button>
+                </div>
+
+                <!-- SECTION 3: POLYMORPHIC AI STRATEGY HANDLERS -->
+                <div class="px-2 pt-2 border-t border-[#35373c]">
+                    <div class="text-[10px] font-bold uppercase tracking-wider text-indigo-400 mb-2 flex items-center justify-between">
+                        <span>AiCommandHandler Map</span>
+                        <span class="bg-indigo-500/20 text-indigo-300 px-1.5 py-0.2 rounded font-mono">Strategy</span>
+                    </div>
+                    <div class="space-y-1.5 text-xs">
+                        <button onclick="triggerQuickCommand('ask')" class="w-full text-left p-2 rounded-lg bg-[#232428] hover:bg-[#35373c] border border-[#35373c] transition-all group">
+                            <div class="flex items-center justify-between">
+                                <span class="font-mono font-semibold text-indigo-400 group-hover:text-indigo-300">/ask</span>
+                                <span class="text-[10px] font-mono text-zinc-500">AskCommandHandler</span>
+                            </div>
+                            <p class="text-[11px] text-zinc-400 mt-0.5">Cosine search pgvector + Qwen RAG</p>
+                        </button>
+
+                        <button onclick="triggerQuickCommand('summarize')" class="w-full text-left p-2 rounded-lg bg-[#232428] hover:bg-[#35373c] border border-[#35373c] transition-all group">
+                            <div class="flex items-center justify-between">
+                                <span class="font-mono font-semibold text-emerald-400 group-hover:text-emerald-300">/summarize</span>
+                                <span class="text-[10px] font-mono text-zinc-500">SummarizeHandler</span>
+                            </div>
+                            <p class="text-[11px] text-zinc-400 mt-0.5">Room transcript ➔ Meeting minutes</p>
+                        </button>
+
+                        <button onclick="triggerQuickCommand('tasks')" class="w-full text-left p-2 rounded-lg bg-[#232428] hover:bg-[#35373c] border border-[#35373c] transition-all group">
+                            <div class="flex items-center justify-between">
+                                <span class="font-mono font-semibold text-amber-400 group-hover:text-amber-300">/tasks</span>
+                                <span class="text-[10px] font-mono text-zinc-500">TasksHandler</span>
+                            </div>
+                            <p class="text-[11px] text-zinc-400 mt-0.5">Extract actionable team checklist</p>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Discord-Style User Voice/Service Status Footer -->
+            <div class="h-13 bg-[#232428] px-3 py-2 flex items-center justify-between border-t border-[#1f2023]">
+                <div class="flex items-center space-x-2 min-w-0">
+                    <div class="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center font-bold text-white text-xs shrink-0">
+                        IH
+                    </div>
+                    <div class="truncate">
+                        <div class="text-xs font-semibold text-white truncate">Induwara</div>
+                        <div class="text-[10px] text-emerald-400 font-mono truncate">ai-service:8083 Lead</div>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-1">
+                    <button onclick="toggleSidebar()" class="p-1.5 rounded hover:bg-[#35373c] text-zinc-400 hover:text-white md:hidden" title="Collapse Sidebar">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7"></path></svg>
+                    </button>
+                    <button onclick="openArchitectureModal()" class="p-1.5 rounded hover:bg-[#35373c] text-zinc-400 hover:text-white" title="System Settings & Info">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 3. MAIN HYBRID CONTENT AREA (CHAT + NOTION SPLIT OR SINGLE VIEW) -->
+        <main class="flex-1 flex flex-col min-w-0 bg-discord-chat overflow-hidden">
             
-            <div class="text-xs font-semibold text-zinc-400 uppercase tracking-wider px-2 py-1 pt-4">Notion Pages</div>
-            <div class="px-2 py-1.5 rounded bg-[#35373c] text-white font-medium cursor-pointer flex items-center space-x-2">
-                <span>📄</span> <span>Architecture Overview</span>
-            </div>
-            <div class="px-2 py-1.5 rounded hover:bg-[#35373c] text-zinc-300 cursor-pointer flex items-center space-x-2">
-                <span>📄</span> <span>Sprint Planning</span>
-            </div>
-        </div>
-    </aside>
+            <!-- Unified Top Workspace Bar with View Switcher -->
+            <header class="h-12 bg-[#2b2d31] border-b border-discord-border px-4 flex items-center justify-between shrink-0">
+                <div class="flex items-center space-x-3 min-w-0">
+                    <button onclick="toggleSidebar()" class="p-1.5 rounded bg-[#35373c] text-zinc-300 hover:text-white md:hidden">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                    </button>
+                    <!-- Active Context Breadcrumb -->
+                    <div class="flex items-center space-x-2 text-sm truncate">
+                        <span class="text-zinc-400 font-mono">#</span>
+                        <span id="headerChannelTitle" class="font-bold text-white truncate">ai-command-hub</span>
+                        <span class="text-zinc-600 hidden sm:inline">×</span>
+                        <span id="headerNoteTitle" class="hidden sm:inline-flex items-center space-x-1 text-xs bg-[#1e1f22] text-zinc-300 px-2 py-0.5 rounded border border-[#3f4147]">
+                            <span>📄</span>
+                            <span>Architecture Overview</span>
+                        </span>
+                    </div>
+                </div>
 
-    <!-- 3. Main Content Area (Notion Doc + Discord Chat Mix) -->
-    <main class="main-content flex-1 flex flex-col">
-        <!-- Top Nav Header -->
-        <header class="h-14 border-b border-[#222327] px-6 flex items-center justify-between shadow-sm">
-            <div class="flex items-center space-x-2 font-medium text-white">
-                <span class="text-zinc-400">📄</span>
-                <span>Architecture Overview</span>
+                <!-- View Mode Switcher (Discord Chat | Split Hybrid | Notion Doc) -->
+                <div class="flex items-center space-x-2">
+                    <div class="bg-[#1e1f22] p-0.5 rounded-lg border border-[#3f4147] flex items-center text-xs">
+                        <button id="btnViewChat" onclick="setViewMode('chat')" class="px-2.5 py-1 rounded-md font-medium transition-all flex items-center space-x-1 text-zinc-400 hover:text-white">
+                            <span>💬</span>
+                            <span class="hidden sm:inline">Discord Chat</span>
+                        </button>
+                        <button id="btnViewSplit" onclick="setViewMode('split')" class="px-2.5 py-1 rounded-md font-medium transition-all flex items-center space-x-1 bg-indigo-600 text-white shadow">
+                            <span>⚡</span>
+                            <span>Split Hybrid</span>
+                        </button>
+                        <button id="btnViewNote" onclick="setViewMode('note')" class="px-2.5 py-1 rounded-md font-medium transition-all flex items-center space-x-1 text-zinc-400 hover:text-white">
+                            <span>📄</span>
+                            <span class="hidden sm:inline">Notion Doc</span>
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- SPLIT / DUAL PANE CONTAINER -->
+            <div class="flex-1 flex overflow-hidden relative">
+
+                <!-- LEFT PANE: DISCORD REAL-TIME CHAT & AI COMMANDS (chat-service) -->
+                <section id="chatPane" class="flex-1 flex flex-col min-w-0 bg-discord-chat border-r border-[#222327] transition-all">
+                    
+                    <!-- Sub-header for Chat Channel + ChatToNoteService Action -->
+                    <div class="h-10 px-4 bg-[#2e3035] border-b border-[#222327] flex items-center justify-between text-xs shrink-0">
+                        <div class="flex items-center space-x-2 truncate">
+                            <span class="w-2 h-2 rounded-full bg-indigo-400"></span>
+                            <span id="chatTopicText" class="text-zinc-400 truncate">OpenFeign connected to /api/ai/command</span>
+                        </div>
+                        <button onclick="convertChatToNote()" class="bg-[#383a40] hover:bg-indigo-600 text-zinc-200 hover:text-white px-2.5 py-1 rounded text-[11px] font-medium flex items-center space-x-1.5 transition-colors shrink-0 border border-[#4e5058]" title="Invoke ChatToNoteService: Convert room messages into an indexed Notion note">
+                            <svg class="w-3.5 h-3.5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                            <span>Convert Chat ➔ Notion Note</span>
+                        </button>
+                    </div>
+
+                    <!-- Chat Messages Stream -->
+                    <div id="chatMessagesContainer" class="flex-1 overflow-y-auto p-4 space-y-4 select-text">
+                        <!-- Populated by JS -->
+                    </div>
+
+                    <!-- Quick Polymorphic Slash Command Pills -->
+                    <div class="px-4 pt-2 bg-discord-chat flex items-center space-x-1.5 overflow-x-auto no-scrollbar">
+                        <span class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 shrink-0">Polymorphic Dispatch:</span>
+                        <button onclick="fillCommandPrompt('/ask What ports do pgvector and Ollama use?')" class="text-[11px] bg-[#2b2d31] hover:bg-indigo-600/30 hover:border-indigo-500/50 text-indigo-300 border border-[#3f4147] px-2 py-0.5 rounded-full font-mono transition-colors shrink-0">
+                            /ask ports & models
+                        </button>
+                        <button onclick="fillCommandPrompt('/ask Which design pattern handles AI commands?')" class="text-[11px] bg-[#2b2d31] hover:bg-indigo-600/30 hover:border-indigo-500/50 text-indigo-300 border border-[#3f4147] px-2 py-0.5 rounded-full font-mono transition-colors shrink-0">
+                            /ask Strategy Pattern
+                        </button>
+                        <button onclick="executeCommandDirectly('summarize')" class="text-[11px] bg-[#2b2d31] hover:bg-emerald-600/30 hover:border-emerald-500/50 text-emerald-300 border border-[#3f4147] px-2 py-0.5 rounded-full font-mono transition-colors shrink-0">
+                            /summarize room
+                        </button>
+                        <button onclick="executeCommandDirectly('tasks')" class="text-[11px] bg-[#2b2d31] hover:bg-amber-600/30 hover:border-amber-500/50 text-amber-300 border border-[#3f4147] px-2 py-0.5 rounded-full font-mono transition-colors shrink-0">
+                            /tasks checklist
+                        </button>
+                    </div>
+
+                    <!-- Chat Input Box -->
+                    <div class="p-3 bg-discord-chat shrink-0">
+                        <form id="chatForm" onsubmit="handleChatSubmit(event)" class="bg-[#383a40] rounded-xl px-3.5 py-2.5 flex items-center space-x-3 border border-transparent focus-within:border-indigo-500/60 transition-colors">
+                            <button type="button" onclick="triggerQuickCommand('ask')" class="w-6 h-6 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center text-xs font-bold shrink-0 transition-colors" title="Insert @ai command">
+                                AI
+                            </button>
+                            <input
+                                id="chatInput"
+                                type="text"
+                                autocomplete="off"
+                                placeholder="Message #ai-command-hub or type /ask, /summarize, /tasks..."
+                                class="bg-transparent flex-1 text-sm text-white placeholder-zinc-500 focus:outline-none select-text"
+                            />
+                            <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1 rounded-lg text-xs font-semibold transition-colors shrink-0 flex items-center space-x-1">
+                                <span>Send</span>
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                            </button>
+                        </form>
+                    </div>
+                </section>
+
+                <!-- RIGHT PANE: NOTION WORKSPACE DOCUMENT EDITOR & RAG INDEXER (note-service -> /api/ai/index) -->
+                <section id="notePane" class="flex-1 flex flex-col min-w-0 bg-notion-bg text-notion-text overflow-hidden transition-all">
+                    
+                    <!-- Notion Document Top Action Bar -->
+                    <div class="h-10 px-5 bg-notion-surface border-b border-notion-border flex items-center justify-between text-xs shrink-0">
+                        <div class="flex items-center space-x-2 truncate">
+                            <span id="vectorStatusIndicator" class="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[11px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                                <span>pgvector: INDEXED</span>
+                            </span>
+                            <span id="noteChunkCountBadge" class="text-[11px] font-mono text-zinc-500 hidden sm:inline">TokenTextSplitter(400)</span>
+                        </div>
+
+                        <div class="flex items-center space-x-2">
+                            <button id="btnIndexNote" onclick="indexActiveNoteToVectorStore()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded-md text-xs font-semibold flex items-center space-x-1.5 shadow-sm transition-all">
+                                <svg id="indexSpinner" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                                <span>Sync & Index to pgvector</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Notion Document Scrollable Canvas -->
+                    <div class="flex-1 overflow-y-auto px-6 sm:px-10 py-8 select-text">
+                        <div class="max-w-2xl mx-auto space-y-6">
+                            
+                            <!-- Emoji & Title Block -->
+                            <div class="space-y-3">
+                                <button id="noteEmojiButton" onclick="cycleNoteEmoji()" class="text-4xl hover:bg-white/5 p-1.5 rounded-xl transition-colors" title="Click to change page icon">
+                                    📄
+                                </button>
+                                <input
+                                    id="noteTitleInput"
+                                    type="text"
+                                    oninput="markNoteModified()"
+                                    placeholder="Untitled Workspace Note"
+                                    class="w-full bg-transparent text-2xl sm:text-3xl font-bold text-white focus:outline-none tracking-tight"
+                                />
+                            </div>
+
+                            <!-- Notion Database Properties Block -->
+                            <div class="py-3 border-y border-notion-border space-y-2 text-xs font-mono">
+                                <div class="grid grid-cols-3 items-center">
+                                    <span class="text-zinc-500 flex items-center space-x-1.5">
+                                        <span>🔑</span>
+                                        <span>pageId</span>
+                                    </span>
+                                    <span id="propPageId" class="col-span-2 text-zinc-300 bg-[#25262b] px-2 py-0.5 rounded w-fit">note-arch-1</span>
+                                </div>
+                                <div class="grid grid-cols-3 items-center">
+                                    <span class="text-zinc-500 flex items-center space-x-1.5">
+                                        <span>🏢</span>
+                                        <span>workspaceId</span>
+                                    </span>
+                                    <span id="propWorkspaceId" class="col-span-2 text-indigo-300 bg-indigo-500/10 border border-indigo-500/20 px-2 py-0.5 rounded w-fit">ws-alpha</span>
+                                </div>
+                                <div class="grid grid-cols-3 items-center">
+                                    <span class="text-zinc-500 flex items-center space-x-1.5">
+                                        <span>🧠</span>
+                                        <span>Embedding Model</span>
+                                    </span>
+                                    <span class="col-span-2 text-amber-300/90">nomic-embed-text (768 dims)</span>
+                                </div>
+                                <div class="grid grid-cols-3 items-center">
+                                    <span class="text-zinc-500 flex items-center space-x-1.5">
+                                        <span>🕒</span>
+                                        <span>Last Indexed</span>
+                                    </span>
+                                    <span id="propLastIndexed" class="col-span-2 text-zinc-400">Just now</span>
+                                </div>
+                            </div>
+
+                            <!-- Notion Callout Box Explaining RAG Link -->
+                            <div class="bg-notion-callout border border-notion-border border-l-4 border-l-indigo-500 rounded-lg p-3.5 flex items-start space-x-3">
+                                <span class="text-lg">💡</span>
+                                <div class="text-xs text-zinc-300 leading-relaxed space-y-1">
+                                    <div class="font-semibold text-white">Live Vector RAG Ingestion (<code class="text-indigo-300">POST /api/ai/index</code>)</div>
+                                    <p class="text-zinc-400">
+                                        Edit any facts below and click <strong>Sync & Index to pgvector</strong>. Then ask a question in Discord chat using <code class="text-indigo-300">/ask</code> — <code class="text-emerald-300">AskCommandHandler</code> will immediately retrieve your updated note and cite its title!
+                                    </p>
+                                </div>
+                            </div>
+
+                            <!-- Editable Note Content Area -->
+                            <div class="space-y-2">
+                                <div class="flex items-center justify-between text-[11px] text-zinc-500 font-mono uppercase">
+                                    <span>Document Body (Markdown / Plaintext Chunks)</span>
+                                    <span id="charCountLabel">0 chars</span>
+                                </div>
+                                <textarea
+                                    id="noteContentTextarea"
+                                    rows="12"
+                                    oninput="markNoteModified()"
+                                    placeholder="Write workspace documentation, port configurations, or team decisions here..."
+                                    class="w-full bg-[#1e1f22]/70 hover:bg-[#1e1f22] focus:bg-[#1e1f22] text-zinc-200 text-sm leading-relaxed p-4 rounded-xl border border-notion-border focus:border-indigo-500/60 focus:outline-none resize-y font-sans"
+                                ></textarea>
+                            </div>
+
+                            <!-- Quick Test Prompt Bar from Note -->
+                            <div class="p-3.5 rounded-xl bg-[#202124] border border-notion-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                                <div class="text-xs">
+                                    <span class="font-semibold text-white">Test RAG Retrieval on this Note</span>
+                                    <p class="text-zinc-400 text-[11px]">Send an <code class="text-indigo-400">@ai ask</code> query to verify this document's chunks in pgvector.</p>
+                                </div>
+                                <button onclick="askAboutActiveNote()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium shrink-0 transition-colors">
+                                    Ask @ai About This Note ➔
+                                </button>
+                            </div>
+
+                        </div>
+                    </div>
+                </section>
+
             </div>
-            <div class="flex items-center space-x-3">
-                <button class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded text-sm font-medium transition-colors">
-                    Ask AI (@ai)
+
+            <!-- 4. COLLAPSIBLE DEVELOPER DRAWER: OPENFEIGN / REST / CURL INSPECTOR -->
+            <div id="inspectorDrawer" class="hidden h-64 bg-[#111214] border-t border-[#2b2d31] flex flex-col shrink-0 z-20">
+                <div class="h-9 px-4 bg-[#18191c] border-b border-[#26272b] flex items-center justify-between text-xs font-mono">
+                    <div class="flex items-center space-x-3">
+                        <span class="text-indigo-400 font-bold flex items-center space-x-1.5">
+                            <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+                            <span>OPENFEIGN & SPRING AI NETWORK INSPECTOR</span>
+                        </span>
+                        <span class="text-zinc-500 hidden sm:inline">com.syncspace.ai.AiController</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="clearApiLogs()" class="text-zinc-400 hover:text-white px-2 py-0.5 rounded hover:bg-[#2b2d31] text-[11px]">Clear</button>
+                        <button onclick="toggleInspectorDrawer()" class="text-zinc-400 hover:text-white p-1 rounded hover:bg-[#2b2d31]">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div>
+                </div>
+                <div id="apiLogsContainer" class="flex-1 overflow-y-auto p-3 space-y-2.5 font-mono text-xs select-text">
+                    <!-- Populated dynamically with every API call -->
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- ARCHITECTURE & STRATEGY PATTERN MODAL -->
+    <div id="architectureModal" class="hidden fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-[#2b2d31] border border-[#3f4147] rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-5 text-sm">
+            <div class="flex items-center justify-between border-b border-[#3f4147] pb-3">
+                <div class="flex items-center space-x-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center font-bold text-white">SS</div>
+                    <div>
+                        <h3 class="font-bold text-white text-base">SyncSpace Microservices & Strategy Pattern</h3>
+                        <p class="text-xs text-zinc-400 font-mono">Java 21 • Spring Boot 4.1.2 • Spring AI 2.0.2 • Docker Compose</p>
+                    </div>
+                </div>
+                <button onclick="closeArchitectureModal()" class="text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-[#3f4147]">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
             </div>
-        </header>
 
-        <!-- Document / Chat Feed -->
-        <div class="flex-1 overflow-y-auto p-8 space-y-6 max-w-4xl">
-            <h1 class="text-3xl font-bold text-white tracking-tight">SyncSpace System Architecture</h1>
-            <p class="text-zinc-300 leading-relaxed">
-                Our platform integrates enterprise-grade microservices built with Java Spring Boot, communicating over service discovery and containerized via Docker Compose.
-            </p>
-
-            <!-- Notion-style callout box -->
-            <div class="notion-card p-4 rounded-lg border-l-4 border-indigo-500 space-y-1">
-                <div class="text-xs font-bold text-indigo-400 uppercase tracking-wide">Strategy Pattern Implementation</div>
-                <p class="text-sm text-zinc-300">The <code>ai-service</code> dispatches commands polymorphically using the <code>AiCommandHandler</code> interface without conditional bloat.</p>
-            </div>
-
-            <!-- Discord-style AI interaction snippet -->
-            <div class="flex items-start space-x-4 pt-4 border-t border-[#3f4147]">
-                <div class="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center font-bold text-white">AI</div>
-                <div class="flex-1 space-y-1">
-                    <div class="flex items-center space-x-2">
-                        <span class="font-semibold text-white">SyncSpace Bot</span>
-                        <span class="bg-indigo-500 text-white text-[10px] px-1.5 py-0.5 rounded font-bold">APP</span>
-                        <span class="text-xs text-zinc-400">Today at 12:45 PM</span>
-                    </div>
-                    <p class="text-sm text-zinc-200">Based on your workspace notes, the system utilizes PostgreSQL pgvector on port 5434 and Ollama running <code>qwen2.5:1.5b</code>.</p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                <div class="p-3 rounded-xl bg-[#1e1f22] border border-[#35373c] space-y-1">
+                    <div class="font-mono font-bold text-emerald-400">1. note-service</div>
+                    <p class="text-zinc-300">Manages Notion-style pages. Pushes updated content to <code class="text-emerald-300">POST /api/ai/index</code>.</p>
+                </div>
+                <div class="p-3 rounded-xl bg-[#1e1f22] border border-[#35373c] space-y-1">
+                    <div class="font-mono font-bold text-indigo-400">2. chat-service</div>
+                    <p class="text-zinc-300">Handles Discord rooms & uses <code class="text-indigo-300">AiClient (OpenFeign)</code> + <code class="text-indigo-300">ChatToNoteService</code>.</p>
+                </div>
+                <div class="p-3 rounded-xl bg-[#1e1f22] border border-[#35373c] space-y-1">
+                    <div class="font-mono font-bold text-amber-400">3. ai-service (:8083)</div>
+                    <p class="text-zinc-300">Dispatches <code class="text-amber-300">AiCommandHandler</code> strategies & queries <code class="text-amber-300">pgvector:5434</code> + <code class="text-amber-300">qwen2.5:1.5b</code>.</p>
                 </div>
             </div>
-        </div>
-        <div class="p-6 bg-[#313338] text-[#dbdee1] font-sans">
-    <div class="space-y-4 max-w-2xl">
-        
-        <!-- User Triggering Command -->
-        <div class="flex items-start space-x-3">
-            <div class="w-10 h-10 rounded-full bg-emerald-600 flex items-center justify-center font-bold text-white">IH</div>
-            <div>
-                <div class="flex items-center space-x-2">
-                    <span class="font-semibold text-white">Induwara</span>
-                    <span class="text-xs text-zinc-400">Today at 12:50 PM</span>
-                </div>
-                <p class="text-sm text-zinc-200">/summarize</p>
+
+            <div class="bg-[#111214] p-3.5 rounded-xl border border-[#2b2d31] font-mono text-xs space-y-1.5">
+                <div class="text-zinc-400">// Polymorphic Dispatch in com.syncspace.ai.AiController</div>
+                <div class="text-indigo-300">AiCommandHandler handler = handlers.get(req.command());</div>
+                <div class="text-emerald-300">String result = handler.execute(req.workspaceId(), req.payload(), vectorStore, chatClient);</div>
+            </div>
+
+            <div class="flex justify-end space-x-2 pt-2">
+                <button onclick="closeArchitectureModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-xs font-semibold transition-colors">
+                    Back to Workspace
+                </button>
             </div>
         </div>
-
-        <!-- AI Response (Notion Callout + Discord Embed Style) -->
-        <div class="flex items-start space-x-3">
-            <div class="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center font-bold text-white shadow-md">🤖</div>
-            <div class="flex-1 bg-[#2b2d31] rounded-lg p-4 border-l-4 border-indigo-500 space-y-3 shadow-md">
-                <div class="flex items-center justify-between">
-                    <span class="font-bold text-white text-sm">SyncSpace AI Summary</span>
-                    <span class="text-xs text-zinc-400">Generated in 1.2s</span>
-                </div>
-                <ul class="text-sm space-y-2 text-zinc-300 list-disc list-inside">
-                    <li>Docker Compose stack successfully containerized and verified.</li>
-                    <li>Polymorphic strategy handlers tested via REST endpoints.</li>
-                    <li>OpenFeign client ready for inter-service communication.</li>
-                </ul>
-            </div>
-        </div>
-
     </div>
-</div>
-    </main>
 
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+    <!-- APPLICATION LOGIC -->
+    <script>
+        // ============================================================================
+        // 1. INITIAL WORKSPACE STATE (Workspaces, Channels, Notes, Messages, API Logs)
+        // ============================================================================
+        const emojis = ['📄', '🚀', '🧠', '⚡', '🛠️', '🔒', '🐳', '📌', '📊'];
+
+        const state = {
+            connectionMode: 'auto', // 'auto' | 'live' | 'simulated'
+            viewMode: 'split',      // 'chat' | 'split' | 'note'
+            activeWorkspaceId: 'ws-alpha',
+            activeChannelId: 'ch-ai-hub',
+            activeNoteId: 'note-arch-1',
+            workspaces: [
+                {
+                    id: 'ws-alpha',
+                    name: 'SyncSpace Core',
+                    short: 'SS',
+                    color: 'from-indigo-500 to-violet-600',
+                    channels: [
+                        { id: 'ch-ai-hub', name: 'ai-command-hub', topic: 'Polymorphic AI Commands (/ask, /summarize, /tasks) via OpenFeign' },
+                        { id: 'ch-backend', name: 'general-backend', topic: 'Spring Boot 4.1.2, Eureka Service Discovery & API Gateway' },
+                        { id: 'ch-docker', name: 'devops-docker', topic: 'compose.ai.yaml container orchestration on CachyOS & Dell Server' }
+                    ],
+                    notes: [
+                        {
+                            id: 'note-arch-1',
+                            emoji: '🧠',
+                            title: 'Docker Compose RAG Architecture',
+                            indexed: true,
+                            lastIndexed: 'Today at 12:40 PM',
+                            content: `Our SyncSpace AI service stack runs completely inside Docker Compose managed by compose.ai.yaml.\n\nKey Port Mappings & Models:\n- pgvector-db runs PostgreSQL 16 on host port 5434 (internal port 5432) with database syncspace_ai.\n- ollama runs on port 11434 hosting nomic-embed-text for embeddings and qwen2.5:1.5b for CPU chat inference.\n- ai-service runs on port 8083 with JVM memory flags -Xms256m -Xmx512m -XX:ActiveProcessorCount=1 to fit our 5GB RAM server budget.`
+                        },
+                        {
+                            id: 'note-poly-2',
+                            emoji: '⚡',
+                            title: 'Strategy Pattern & OpenFeign Spec',
+                            indexed: true,
+                            lastIndexed: 'Today at 12:42 PM',
+                            content: `To satisfy the Polymorphism rubric requirement, AiController injects a List<AiCommandHandler> into a Map<String, AiCommandHandler>.\n\nImplemented Strategy Handlers in com.syncspace.ai:\n1. AskCommandHandler ("ask"): Performs similaritySearch(topK=3) filtered by workspaceId in pgvector and augments the Qwen prompt.\n2. SummarizeCommandHandler ("summarize"): Converts team chat transcripts into concise bullet-point meeting minutes.\n3. TasksCommandHandler ("tasks"): Extracts actionable tasks and assignments as a clean checklist.\n\nTeammate B invokes POST /api/ai/command from chat-service using the Spring Cloud OpenFeign AiClient interface.`
+                        },
+                        {
+                            id: 'note-fix-3',
+                            emoji: '🛠️',
+                            title: 'ChatToNoteService & Actuator Health',
+                            indexed: true,
+                            lastIndexed: 'Today at 12:45 PM',
+                            content: `Spring Boot Actuator is enabled in pom.xml via spring-boot-starter-actuator, exposing /actuator/health with db details always shown.\n\nIn chat-service, ChatToNoteService queries ChatMessageRepository.findByRoomId(roomId), streams each ChatMessage using m.getSender() + ": " + m.getContent(), and converts room discussions directly into structured workspace notes.`
+                        }
+                    ],
+                    messages: {
+                        'ch-ai-hub': [
+                            {
+                                id: 'm1',
+                                sender: 'Induwara',
+                                role: 'AI & RAG Lead',
+                                avatar: 'IH',
+                                avatarBg: 'bg-emerald-600',
+                                time: '12:41 PM',
+                                text: 'I finished refactoring `AiController.java` to use the Strategy Pattern (`AiCommandHandler`) and updated `TokenTextSplitter.builder().withChunkSize(400).build()`!'
+                            },
+                            {
+                                id: 'm2',
+                                sender: 'Teammate B',
+                                role: 'chat-service Lead',
+                                avatar: 'TB',
+                                avatarBg: 'bg-sky-600',
+                                time: '12:43 PM',
+                                text: 'Awesome! I wired up the `AiClient` OpenFeign interface in `chat-service` and fixed `ChatToNoteService`. Let us test `/ask`, `/summarize`, and `/tasks` right here.'
+                            },
+                            {
+                                id: 'm3',
+                                sender: 'SyncSpace AI',
+                                isBot: true,
+                                commandType: 'ask',
+                                handlerClass: 'com.syncspace.ai.AskCommandHandler',
+                                time: '12:44 PM',
+                                text: 'Based on your indexed workspace notes (**Docker Compose RAG Architecture**), `pgvector-db` is mapped to host port **5434** (internal 5432), `ollama` runs on port **11434** with `qwen2.5:1.5b` and `nomic-embed-text`, and `ai-service` listens on port **8083**.',
+                                citations: ['Docker Compose RAG Architecture']
+                            }
+                        ],
+                        'ch-backend': [
+                            {
+                                id: 'm4',
+                                sender: 'Induwara',
+                                role: 'AI & RAG Lead',
+                                avatar: 'IH',
+                                avatarBg: 'bg-emerald-600',
+                                time: '11:20 AM',
+                                text: 'Make sure Eureka discovery and API Gateway routes `/api/ai/**` to port 8083.'
+                            },
+                            {
+                                id: 'm5',
+                                sender: 'Teammate D',
+                                role: 'Gateway Lead',
+                                avatar: 'TD',
+                                avatarBg: 'bg-amber-600',
+                                time: '11:25 AM',
+                                text: 'Confirmed! I will also configure the Postman and Newman test scripts by tonight.'
+                            }
+                        ],
+                        'ch-docker': [
+                            {
+                                id: 'm6',
+                                sender: 'Induwara',
+                                role: 'AI & RAG Lead',
+                                avatar: 'IH',
+                                avatarBg: 'bg-emerald-600',
+                                time: '12:10 PM',
+                                text: 'All 3 containers (`syncspace-ai-service-local`, `syncspace-ollama-local`, `syncspace-pgvector-local`) are healthy under `/actuator/health`.'
+                            }
+                        ]
+                    }
+                },
+                {
+                    id: 'ws-sec',
+                    name: 'CyberSec Lab',
+                    short: 'CS',
+                    color: 'from-rose-500 to-orange-600',
+                    channels: [
+                        { id: 'ch-sec-ops', name: 'pentest-notes', topic: 'Zero-trust microservices security & JWT validation' },
+                        { id: 'ch-sec-audit', name: 'audit-logs', topic: 'Automated security compliance checks' }
+                    ],
+                    notes: [
+                        {
+                            id: 'note-sec-1',
+                            emoji: '🔒',
+                            title: 'JWT & API Gateway Security Policy',
+                            indexed: true,
+                            lastIndexed: 'Today at 10:15 AM',
+                            content: `All external requests must pass through the Spring Cloud API Gateway on port 8080.\nInternal microservices (note-service, chat-service, ai-service) validate JWT claims and isolate vector search using FilterExpressionBuilder.eq("workspaceId", workspaceId) so tenants can never read another workspace's embeddings.`
+                        }
+                    ],
+                    messages: {
+                        'ch-sec-ops': [
+                            {
+                                id: 'ms1',
+                                sender: 'Induwara',
+                                role: 'Security Architect',
+                                avatar: 'IH',
+                                avatarBg: 'bg-rose-600',
+                                time: '10:30 AM',
+                                text: 'Verified that `FilterExpressionBuilder` strictly isolates `workspaceId` in `pgvector` queries.'
+                            }
+                        ],
+                        'ch-sec-audit': []
+                    }
+                },
+                {
+                    id: 'ws-infra',
+                    name: 'Dell Server Ops',
+                    short: 'DO',
+                    color: 'from-emerald-500 to-teal-600',
+                    channels: [
+                        { id: 'ch-dell-ram', name: 'poweredge-telemetry', topic: 'Monitoring 5GB RAM budget & CPU threads on Dell PowerEdge' }
+                    ],
+                    notes: [
+                        {
+                            id: 'note-infra-1',
+                            emoji: '🐳',
+                            title: 'Dell PowerEdge 5GB RAM Budget',
+                            indexed: true,
+                            lastIndexed: 'Yesterday',
+                            content: `To prevent OOM kills on the Dell PowerEdge server:\n- ai-service runs with -Xms256m -Xmx512m -XX:ActiveProcessorCount=1\n- Ollama uses qwen2.5:1.5b (~1.1GB RAM) and nomic-embed-text (~300MB RAM)\n- PostgreSQL pgvector is tuned with shared_buffers=128MB.`
+                        }
+                    ],
+                    messages: {
+                        'ch-dell-ram': [
+                            {
+                                id: 'mi1',
+                                sender: 'Teammate C',
+                                role: 'Infra Lead',
+                                avatar: 'TC',
+                                avatarBg: 'bg-teal-600',
+                                time: '09:45 AM',
+                                text: 'Checked `docker stats` — total stack memory is holding steady at 2.4GB out of our 5GB cap.'
+                            }
+                        ]
+                    }
+                }
+            ],
+            apiLogs: [
+                {
+                    id: 'log-init-1',
+                    method: 'POST',
+                    endpoint: 'http://localhost:8083/api/ai/index',
+                    handler: 'AiController.indexNote (TokenTextSplitter)',
+                    status: '200 OK',
+                    latency: '42ms',
+                    curl: `curl -X POST http://localhost:8083/api/ai/index -H "Content-Type: application/json" -d '{"pageId":"note-arch-1","workspaceId":"ws-alpha","title":"Docker Compose RAG Architecture","content":"Our SyncSpace AI service stack runs completely inside Docker Compose..."}'`,
+                    response: `{"status":"INDEXED","pageId":"note-arch-1","title":"Docker Compose RAG Architecture"}`
+                },
+                {
+                    id: 'log-init-2',
+                    method: 'POST',
+                    endpoint: 'http://localhost:8083/api/ai/command',
+                    handler: 'com.syncspace.ai.AskCommandHandler',
+                    status: '200 OK',
+                    latency: '380ms',
+                    curl: `curl -X POST http://localhost:8083/api/ai/command -H "Content-Type: application/json" -d '{"command":"ask","workspaceId":"ws-alpha","payload":"Which ports are used by pgvector and Ollama?"}'`,
+                    response: `{"command":"ask","workspaceId":"ws-alpha","result":"pgvector runs on 5434 and Ollama runs on 11434..."}`
+                }
+            ]
+        };
+
+        // ============================================================================
+        // 2. HELPER GETTERS FOR ACTIVE ENTITIES
+        // ============================================================================
+        function getActiveWorkspace() {
+            return state.workspaces.find(w => w.id === state.activeWorkspaceId) || state.workspaces[0];
+        }
+
+        function getActiveChannel() {
+            const ws = getActiveWorkspace();
+            return ws.channels.find(c => c.id === state.activeChannelId) || ws.channels[0];
+        }
+
+        function getActiveNote() {
+            const ws = getActiveWorkspace();
+            return ws.notes.find(n => n.id === state.activeNoteId) || ws.notes[0];
+        }
+
+        // ============================================================================
+        // 3. UI RENDERING FUNCTIONS
+        // ============================================================================
+        function renderAll() {
+            renderWorkspaceRail();
+            renderSidebar();
+            renderHeader();
+            renderChatMessages();
+            renderNoteEditor();
+            renderApiLogs();
+            applyViewMode();
+        }
+
+        function renderWorkspaceRail() {
+            const container = document.getElementById('workspaceRailList');
+            container.innerHTML = state.workspaces.map(ws => {
+                const isActive = ws.id === state.activeWorkspaceId;
+                return `
+                    <div class="relative flex items-center justify-center w-full server-icon-wrapper ${isActive ? 'active' : ''}">
+                        <div class="server-pill absolute left-0 w-1 bg-white rounded-r-full ${isActive ? 'h-9' : 'h-0'}"></div>
+                        <button
+                            onclick="switchWorkspace('${ws.id}')"
+                            title="${ws.name} (${ws.id})"
+                            class="w-12 h-12 ${isActive ? 'rounded-2xl bg-gradient-to-br ' + ws.color + ' text-white shadow-lg' : 'rounded-[24px] hover:rounded-2xl bg-[#313338] hover:bg-indigo-600 text-zinc-200 hover:text-white'} font-bold text-sm flex items-center justify-center transition-all"
+                        >
+                            ${ws.short}
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderSidebar() {
+            const ws = getActiveWorkspace();
+            document.getElementById('activeWorkspaceName').textContent = ws.name;
+            document.getElementById('activeWorkspaceIdBadge').textContent = ws.id;
+            const indexedNotesCount = ws.notes.filter(n => n.indexed).length;
+            document.getElementById('indexedCountBadge').textContent = `${indexedNotesCount}/${ws.notes.length} indexed`;
+
+            // Render Channels
+            const channelContainer = document.getElementById('channelListContainer');
+            channelContainer.innerHTML = ws.channels.map(ch => {
+                const isActive = ch.id === state.activeChannelId;
+                const msgCount = (ws.messages[ch.id] || []).length;
+                return `
+                    <button
+                        onclick="selectChannel('${ch.id}')"
+                        class="w-full px-2.5 py-1.5 rounded-md flex items-center justify-between text-xs font-medium transition-colors ${isActive ? 'bg-discord-active text-white' : 'text-zinc-400 hover:bg-discord-hover hover:text-zinc-200'}"
+                    >
+                        <div class="flex items-center space-x-2 truncate">
+                            <span class="text-zinc-500 font-mono text-sm">#</span>
+                            <span class="truncate">${ch.name}</span>
+                        </div>
+                        <span class="text-[10px] font-mono ${isActive ? 'text-zinc-300' : 'text-zinc-500'}">${msgCount}</span>
+                    </button>
+                `;
+            }).join('');
+
+            // Render Notes
+            const noteContainer = document.getElementById('noteListContainer');
+            noteContainer.innerHTML = ws.notes.map(note => {
+                const isActive = note.id === state.activeNoteId;
+                return `
+                    <button
+                        onclick="selectNote('${note.id}')"
+                        class="w-full px-2.5 py-1.5 rounded-md flex items-center justify-between text-xs font-medium transition-colors ${isActive ? 'bg-discord-active text-white' : 'text-zinc-400 hover:bg-discord-hover hover:text-zinc-200'}"
+                    >
+                        <div class="flex items-center space-x-2 truncate">
+                            <span>${note.emoji}</span>
+                            <span class="truncate">${escapeHtml(note.title)}</span>
+                        </div>
+                        <span class="w-2 h-2 rounded-full shrink-0 ${note.indexed ? 'bg-emerald-400' : 'bg-amber-400 animate-pulse'}" title="${note.indexed ? 'Indexed in pgvector' : 'Unindexed changes'}"></span>
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function renderHeader() {
+            const ch = getActiveChannel();
+            const note = getActiveNote();
+            document.getElementById('headerChannelTitle').textContent = ch.name;
+            document.getElementById('chatTopicText').textContent = ch.topic;
+            document.getElementById('chatInput').placeholder = `Message #${ch.name} or type /ask, /summarize, /tasks...`;
+            document.getElementById('headerNoteTitle').innerHTML = `<span>${note.emoji}</span><span>${escapeHtml(note.title)}</span>`;
+        }
+
+        function renderChatMessages() {
+            const ws = getActiveWorkspace();
+            const ch = getActiveChannel();
+            const msgs = ws.messages[ch.id] || [];
+            const container = document.getElementById('chatMessagesContainer');
+
+            if (msgs.length === 0) {
+                container.innerHTML = `
+                    <div class="h-full flex flex-col items-center justify-center text-center p-6 text-zinc-500 space-y-2">
+                        <div class="w-12 h-12 rounded-2xl bg-[#2b2d31] flex items-center justify-center text-2xl">💬</div>
+                        <div class="text-sm font-semibold text-zinc-300">Welcome to #${ch.name}</div>
+                        <p class="text-xs max-w-xs">Start chatting or type <code class="text-indigo-400">/ask</code>, <code class="text-emerald-400">/summarize</code>, or <code class="text-amber-400">/tasks</code> to invoke your Spring AI handlers.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = msgs.map(m => {
+                if (m.isBot) {
+                    const badgeColors = {
+                        ask: 'border-indigo-500 bg-indigo-500/10 text-indigo-300',
+                        summarize: 'border-emerald-500 bg-emerald-500/10 text-emerald-300',
+                        tasks: 'border-amber-500 bg-amber-500/10 text-amber-300'
+                    };
+                    const borderAccent = m.commandType === 'summarize' ? 'border-l-emerald-500' : (m.commandType === 'tasks' ? 'border-l-amber-500' : 'border-l-indigo-500');
+
+                    // Format tasks as interactive checkboxes if commandType === 'tasks'
+                    let bodyHtml = `<div class="text-xs sm:text-sm text-zinc-200 leading-relaxed whitespace-pre-line">${formatMarkdownText(m.text)}</div>`;
+                    if (m.tasksList && m.tasksList.length > 0) {
+                        bodyHtml = `
+                            <div class="space-y-1.5 mt-1">
+                                ${m.tasksList.map((t, idx) => `
+                                    <label class="flex items-start space-x-2.5 p-1.5 rounded hover:bg-[#35373c]/60 cursor-pointer text-xs sm:text-sm text-zinc-200">
+                                        <input type="checkbox" ${t.done ? 'checked' : ''} onchange="toggleTaskItem('${m.id}', ${idx})" class="mt-0.5 rounded bg-[#1e1f22] border-zinc-600 text-indigo-600 focus:ring-0 cursor-pointer" />
+                                        <span class="${t.done ? 'line-through text-zinc-500' : ''}">${escapeHtml(t.label)}</span>
+                                    </label>
+                                `).join('')}
+                            </div>
+                        `;
+                    }
+
+                    // Citations pills (clickable to focus that note!)
+                    let citationsHtml = '';
+                    if (m.citations && m.citations.length > 0) {
+                        citationsHtml = `
+                            <div class="pt-2 mt-2 border-t border-[#3a3c42] flex flex-wrap items-center gap-1.5">
+                                <span class="text-[10px] font-mono uppercase text-zinc-400">pgvector Citations:</span>
+                                ${m.citations.map(title => `
+                                    <button onclick="openNoteByTitle('${escapeJsString(title)}')" class="text-[11px] bg-[#1e1f22] hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded flex items-center space-x-1 transition-colors">
+                                        <span>📄</span>
+                                        <span>${escapeHtml(title)}</span>
+                                    </button>
+                                `).join('')}
+                            </div>
+                        `;
+                    }
+
+                    return `
+                        <div class="flex items-start space-x-3 group">
+                            <div class="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center font-bold text-white text-xs shrink-0 shadow-md">
+                                🤖
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <span class="font-semibold text-white text-xs sm:text-sm">SyncSpace AI</span>
+                                    <span class="bg-indigo-500 text-white text-[9px] px-1.5 py-0.2 rounded font-bold uppercase tracking-wider">BOT</span>
+                                    <span class="text-[10px] font-mono px-1.5 py-0.2 rounded border ${badgeColors[m.commandType] || badgeColors.ask}">
+                                        ${m.handlerClass || 'AiCommandHandler'}
+                                    </span>
+                                    <span class="text-[10px] text-zinc-500">${m.time}</span>
+                                </div>
+                                <div class="mt-1.5 bg-[#2b2d31] border border-[#3f4147] border-l-4 ${borderAccent} rounded-lg p-3.5 shadow-sm">
+                                    ${bodyHtml}
+                                    ${citationsHtml}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                // Standard user message
+                return `
+                    <div class="flex items-start space-x-3 group hover:bg-[#2e3035]/60 -mx-2 px-2 py-1 rounded-lg transition-colors">
+                        <div class="w-9 h-9 rounded-full ${m.avatarBg || 'bg-emerald-600'} flex items-center justify-center font-bold text-white text-xs shrink-0">
+                            ${m.avatar || 'U'}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center space-x-2">
+                                <span class="font-semibold text-white text-xs sm:text-sm">${escapeHtml(m.sender)}</span>
+                                ${m.role ? `<span class="text-[10px] bg-[#232428] text-zinc-400 px-1.5 py-0.2 rounded border border-[#35373c]">${escapeHtml(m.role)}</span>` : ''}
+                                <span class="text-[10px] text-zinc-500">${m.time}</span>
+                            </div>
+                            <div class="text-xs sm:text-sm text-zinc-200 mt-0.5 leading-relaxed break-words">${formatMarkdownText(m.text)}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function renderNoteEditor() {
+            const note = getActiveNote();
+            if (!note) return;
+
+            document.getElementById('noteEmojiButton').textContent = note.emoji;
+            document.getElementById('noteTitleInput').value = note.title;
+            document.getElementById('propPageId').textContent = note.id;
+            document.getElementById('propWorkspaceId').textContent = state.activeWorkspaceId;
+            document.getElementById('propLastIndexed').textContent = note.lastIndexed;
+            document.getElementById('noteContentTextarea').value = note.content;
+
+            updateNoteStatusBadges(note);
+        }
+
+        function updateNoteStatusBadges(note) {
+            const charLen = note.content.length;
+            const chunks = Math.max(1, Math.ceil(charLen / 400));
+            document.getElementById('charCountLabel').textContent = `${charLen} chars • ~${chunks} chunk(s)`;
+            document.getElementById('noteChunkCountBadge').textContent = `TokenTextSplitter(400) • ${chunks} chunk${chunks > 1 ? 's' : ''}`;
+
+            const statusEl = document.getElementById('vectorStatusIndicator');
+            if (note.indexed) {
+                statusEl.className = 'inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[11px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/30';
+                statusEl.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span><span>pgvector: INDEXED</span>`;
+            } else {
+                statusEl.className = 'inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[11px] font-mono bg-amber-500/10 text-amber-300 border border-amber-500/30';
+                statusEl.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping"></span><span>MODIFIED (Sync Needed)</span>`;
+            }
+        }
+
+        function renderApiLogs() {
+            document.getElementById('apiLogCount').textContent = state.apiLogs.length;
+            const container = document.getElementById('apiLogsContainer');
+            container.innerHTML = state.apiLogs.map((log, index) => `
+                <div class="bg-[#18191c] border border-[#2b2d31] rounded-lg p-2.5 space-y-1.5">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div class="flex items-center space-x-2">
+                            <span class="px-1.5 py-0.2 rounded text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">${log.method}</span>
+                            <span class="text-white font-semibold">${escapeHtml(log.endpoint)}</span>
+                            <span class="text-emerald-400 text-[11px]">${log.status}</span>
+                            <span class="text-zinc-500 text-[10px]">(${log.latency})</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-[10px] text-amber-300/90">${escapeHtml(log.handler)}</span>
+                            <button onclick="copyCurlCommand(${index})" class="bg-[#2b2d31] hover:bg-indigo-600 text-zinc-200 hover:text-white px-2 py-0.5 rounded text-[10px] transition-colors">
+                                Copy cURL
+                            </button>
+                        </div>
+                    </div>
+                    <div class="text-[11px] text-zinc-400 truncate font-mono">${escapeHtml(log.curl)}</div>
+                    <div class="text-[11px] text-emerald-300/90 bg-[#111214] p-1.5 rounded border border-[#232428] overflow-x-auto">${escapeHtml(log.response)}</div>
+                </div>
+            `).join('');
+        }
+
+        // ============================================================================
+        // 4. INTERACTION & NAVIGATION HANDLERS
+        // ============================================================================
+        function switchWorkspace(workspaceId) {
+            state.activeWorkspaceId = workspaceId;
+            const ws = getActiveWorkspace();
+            state.activeChannelId = ws.channels[0].id;
+            state.activeNoteId = ws.notes[0].id;
+            renderAll();
+            showToast(`Switched workspace to ${ws.name} (${ws.id})`, 'indigo');
+        }
+
+        function selectChannel(channelId) {
+            state.activeChannelId = channelId;
+            if (state.viewMode === 'note') {
+                state.viewMode = 'split';
+            }
+            renderAll();
+        }
+
+        function selectNote(noteId) {
+            state.activeNoteId = noteId;
+            if (state.viewMode === 'chat') {
+                state.viewMode = 'split';
+            }
+            renderAll();
+        }
+
+        function openNoteByTitle(title) {
+            const ws = getActiveWorkspace();
+            const found = ws.notes.find(n => n.title.toLowerCase() === title.toLowerCase());
+            if (found) {
+                state.activeNoteId = found.id;
+                if (state.viewMode === 'chat') {
+                    state.viewMode = 'split';
+                }
+                renderAll();
+                showToast(`Opened cited note: "${found.title}"`, 'emerald');
+            }
+        }
+
+        function setViewMode(mode) {
+            state.viewMode = mode;
+            applyViewMode();
+        }
+
+        function applyViewMode() {
+            const chatPane = document.getElementById('chatPane');
+            const notePane = document.getElementById('notePane');
+            const btnChat = document.getElementById('btnViewChat');
+            const btnSplit = document.getElementById('btnViewSplit');
+            const btnNote = document.getElementById('btnViewNote');
+
+            const activeBtnClass = 'px-2.5 py-1 rounded-md font-medium transition-all flex items-center space-x-1 bg-indigo-600 text-white shadow';
+            const inactiveBtnClass = 'px-2.5 py-1 rounded-md font-medium transition-all flex items-center space-x-1 text-zinc-400 hover:text-white';
+
+            btnChat.className = state.viewMode === 'chat' ? activeBtnClass : inactiveBtnClass;
+            btnSplit.className = state.viewMode === 'split' ? activeBtnClass : inactiveBtnClass;
+            btnNote.className = state.viewMode === 'note' ? activeBtnClass : inactiveBtnClass;
+
+            if (state.viewMode === 'chat') {
+                chatPane.classList.remove('hidden');
+                notePane.classList.add('hidden');
+            } else if (state.viewMode === 'note') {
+                chatPane.classList.add('hidden');
+                notePane.classList.remove('hidden');
+            } else {
+                chatPane.classList.remove('hidden');
+                notePane.classList.remove('hidden');
+            }
+        }
+
+        function toggleSidebar() {
+            const sb = document.getElementById('secondarySidebar');
+            sb.classList.toggle('hidden');
+        }
+
+        function handleConnectionModeChange(mode) {
+            state.connectionMode = mode;
+            showToast(`Connection mode set to: ${mode.toUpperCase()}`, 'indigo');
+        }
+
+        // ============================================================================
+        // 5. NOTION DOCUMENT EDITING & VECTOR STORE INDEXING (/api/ai/index)
+        // ============================================================================
+        function cycleNoteEmoji() {
+            const note = getActiveNote();
+            const idx = emojis.indexOf(note.emoji);
+            note.emoji = emojis[(idx + 1) % emojis.length];
+            renderSidebar();
+            renderHeader();
+            renderNoteEditor();
+        }
+
+        function markNoteModified() {
+            const note = getActiveNote();
+            note.title = document.getElementById('noteTitleInput').value || 'Untitled Note';
+            note.content = document.getElementById('noteContentTextarea').value;
+            note.indexed = false;
+            updateNoteStatusBadges(note);
+            renderSidebar();
+            renderHeader();
+        }
+
+        function createNewNotePage() {
+            const ws = getActiveWorkspace();
+            const newId = `note-custom-${Date.now().toString().slice(-4)}`;
+            const newNote = {
+                id: newId,
+                emoji: '📌',
+                title: `Sprint Design Note #${ws.notes.length + 1}`,
+                indexed: false,
+                lastIndexed: 'Not indexed yet',
+                content: `New workspace specification created by Induwara.\n\nKey Decisions:\n- Use Spring AI VectorStore with pgvector.\n- Route @ai chat mentions via OpenFeign to AiController.`
+            };
+            ws.notes.unshift(newNote);
+            state.activeNoteId = newId;
+            if (state.viewMode === 'chat') state.viewMode = 'split';
+            renderAll();
+            showToast('Created new Notion page. Click "Sync & Index" to embed in pgvector!', 'indigo');
+        }
+
+        async function indexActiveNoteToVectorStore() {
+            const note = getActiveNote();
+            const btn = document.getElementById('btnIndexNote');
+            const spinner = document.getElementById('indexSpinner');
+
+            btn.disabled = true;
+            spinner.classList.add('animate-spin');
+
+            const payload = {
+                pageId: note.id,
+                workspaceId: state.activeWorkspaceId,
+                title: note.title,
+                content: note.content
+            };
+
+            const startTime = performance.now();
+            let responseData = null;
+            let statusLabel = '200 OK (Local RAG)';
+
+            if (state.connectionMode !== 'simulated') {
+                try {
+                    const res = await fetch('http://localhost:8083/api/ai/index', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (res.ok) {
+                        responseData = await res.json();
+                        statusLabel = '200 OK (localhost:8083)';
+                    }
+                } catch (err) {
+                    if (state.connectionMode === 'live') {
+                        showToast('localhost:8083 unreachable — check Docker container or switch to Auto mode', 'amber');
+                    }
+                }
+            }
+
+            if (!responseData) {
+                await new Promise(r => setTimeout(r, 260));
+                responseData = {
+                    status: 'INDEXED',
+                    pageId: note.id,
+                    title: note.title
+                };
+            }
+
+            const elapsed = `${Math.round(performance.now() - startTime)}ms`;
+            note.indexed = true;
+            note.lastIndexed = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            // Log API call
+            state.apiLogs.unshift({
+                id: 'log-' + Date.now(),
+                method: 'POST',
+                endpoint: 'http://localhost:8083/api/ai/index',
+                handler: 'AiController.indexNote (TokenTextSplitter)',
+                status: statusLabel,
+                latency: elapsed,
+                curl: `curl -X POST http://localhost:8083/api/ai/index -H "Content-Type: application/json" -d '${JSON.stringify(payload).replace(/'/g, "\\'")}'`,
+                response: JSON.stringify(responseData)
+            });
+
+            btn.disabled = false;
+            spinner.classList.remove('animate-spin');
+            renderAll();
+            showToast(`Indexed "${note.title}" into pgvector (${elapsed})`, 'emerald');
+        }
+
+        function askAboutActiveNote() {
+            const note = getActiveNote();
+            if (state.viewMode === 'note') {
+                state.viewMode = 'split';
+                applyViewMode();
+            }
+            fillCommandPrompt(`/ask Summarize the key facts from "${note.title}"`);
+        }
+
+        // ============================================================================
+        // 6. DISCORD CHAT & POLYMORPHIC AI COMMAND DISPATCH (/api/ai/command)
+        // ============================================================================
+        function fillCommandPrompt(text) {
+            const input = document.getElementById('chatInput');
+            input.value = text;
+            input.focus();
+        }
+
+        function triggerQuickCommand(cmd) {
+            if (cmd === 'ask') {
+                fillCommandPrompt('/ask What are the key details in our workspace notes?');
+            } else if (cmd === 'summarize') {
+                executeCommandDirectly('summarize');
+            } else if (cmd === 'tasks') {
+                executeCommandDirectly('tasks');
+            }
+        }
+
+        function executeCommandDirectly(cmd) {
+            const input = document.getElementById('chatInput');
+            input.value = `/${cmd}`;
+            handleChatSubmit(new Event('submit'));
+        }
+
+        async function handleChatSubmit(e) {
+            if (e && e.preventDefault) e.preventDefault();
+            const input = document.getElementById('chatInput');
+            const rawText = input.value.trim();
+            if (!rawText) return;
+
+            input.value = '';
+            const ws = getActiveWorkspace();
+            const ch = getActiveChannel();
+            if (!ws.messages[ch.id]) ws.messages[ch.id] = [];
+
+            const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            // Push user's message to room
+            ws.messages[ch.id].push({
+                id: 'm-' + Date.now(),
+                sender: 'Induwara',
+                role: 'AI & RAG Lead',
+                avatar: 'IH',
+                avatarBg: 'bg-emerald-600',
+                time: nowTime,
+                text: rawText
+            });
+            renderChatMessages();
+            renderSidebar();
+
+            // Detect if message triggers a Polymorphic AI Command (/ask, /summarize, /tasks, or @ai)
+            const parsedCmd = parseAiCommand(rawText, ws.messages[ch.id]);
+            if (parsedCmd) {
+                await dispatchPolymorphicAiCommand(parsedCmd.command, parsedCmd.payload, ch.id);
+            }
+        }
+
+        function parseAiCommand(text, roomMessages) {
+            const lower = text.toLowerCase();
+
+            //Build transcript for summarize / tasks
+            const buildTranscript = () => {
+                return roomMessages
+                    .filter(m => !m.isBot && !m.text.startsWith('/'))
+                    .map(m => `${m.sender}: ${m.text}`)
+                    .join('\n') || 'Induwara: Deployed compose.ai.yaml.\nTeammate B: Tested OpenFeign client.\nTeammate E: Will finish Postman integration tests.';
+            };
+
+            if (lower.startsWith('/summarize') || lower.startsWith('@ai summarize')) {
+                const customText = text.replace(/^(\/summarize|@ai summarize)\s*/i, '').trim();
+                return { command: 'summarize', payload: customText || buildTranscript() };
+            }
+            if (lower.startsWith('/tasks') || lower.startsWith('@ai tasks')) {
+                const customText = text.replace(/^(\/tasks|@ai tasks)\s*/i, '').trim();
+                return { command: 'tasks', payload: customText || buildTranscript() };
+            }
+            if (lower.startsWith('/ask') || lower.startsWith('@ai ask') || lower.startsWith('@ai')) {
+                const query = text.replace(/^(\/ask|@ai ask|@ai)\s*/i, '').trim() || 'What is in our workspace notes?';
+                return { command: 'ask', payload: query };
+            }
+            return null;
+        }
+
+        async function dispatchPolymorphicAiCommand(command, payloadText, channelId) {
+            const ws = getActiveWorkspace();
+            const requestBody = {
+                command: command,
+                workspaceId: ws.id,
+                payload: payloadText
+            };
+
+            const handlerMap = {
+                ask: 'com.syncspace.ai.AskCommandHandler',
+                summarize: 'com.syncspace.ai.SummarizeCommandHandler',
+                tasks: 'com.syncspace.ai.TasksCommandHandler'
+            };
+
+            const startTime = performance.now();
+            let resultText = null;
+            let citations = [];
+            let tasksList = null;
+            let statusLabel = '200 OK (Smart RAG)';
+
+            // 1. Try live localhost:8083 if not in pure simulation mode
+            if (state.connectionMode !== 'simulated') {
+                try {
+                    const res = await fetch('http://localhost:8083/api/ai/command', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(requestBody)
+                    });
+                    if (res.ok) {
+                        const json = await res.json();
+                        resultText = json.result;
+                        statusLabel = '200 OK (localhost:8083)';
+                    }
+                } catch (err) {
+                    // Fallback to in-browser RAG simulation seamlessly
+                }
+            }
+
+            // 2. If live backend didn't respond, run intelligent local Strategy Pattern RAG engine
+            if (!resultText) {
+                await new Promise(r => setTimeout(r, 340));
+                const sim = executeLocalStrategyHandler(command, ws, payloadText);
+                resultText = sim.text;
+                citations = sim.citations || [];
+                tasksList = sim.tasksList || null;
+            }
+
+            const elapsed = `${Math.round(performance.now() - startTime)}ms`;
+
+            // Append AI Bot Response to chat channel
+            ws.messages[channelId].push({
+                id: 'bot-' + Date.now(),
+                sender: 'SyncSpace AI',
+                isBot: true,
+                commandType: command,
+                handlerClass: handlerMap[command] || 'com.syncspace.ai.AiCommandHandler',
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                text: resultText,
+                citations: citations,
+                tasksList: tasksList
+            });
+
+            // Record in Network Inspector
+            state.apiLogs.unshift({
+                id: 'log-' + Date.now(),
+                method: 'POST',
+                endpoint: 'http://localhost:8083/api/ai/command',
+                handler: handlerMap[command] || 'AiController.handleCommand',
+                status: statusLabel,
+                latency: elapsed,
+                curl: `curl -X POST http://localhost:8083/api/ai/command -H "Content-Type: application/json" -d '${JSON.stringify(requestBody).replace(/'/g, "\\'")}'`,
+                response: JSON.stringify({ command, workspaceId: ws.id, result: resultText })
+            });
+
+            renderChatMessages();
+            renderApiLogs();
+        }
+
+        // Intelligent In-Browser Strategy Pattern + Vector Similarity Search Engine
+        function executeLocalStrategyHandler(command, workspace, payload) {
+            if (command === 'ask') {
+                // Score workspace notes by keyword overlap with user's query
+                const queryWords = payload.toLowerCase().split(/\W+/).filter(w => w.length > 2);
+                const scoredNotes = workspace.notes.map(note => {
+                    const haystack = (note.title + ' ' + note.content).toLowerCase();
+                    let score = 0;
+                    queryWords.forEach(w => {
+                        if (haystack.includes(w)) score += 3;
+                    });
+                    return { note, score };
+                }).sort((a, b) => b.score - a.score);
+
+                const topMatches = scoredNotes.filter(n => n.score > 0).slice(0, 2);
+                const chosen = topMatches.length > 0 ? topMatches.map(m => m.note) : [workspace.notes[0]];
+
+                const snippets = chosen.map(n => {
+                    const lines = n.content.split('\n').filter(l => l.trim().length > 0);
+                    return `• From **${n.title}**: ${lines.slice(0, 3).join(' ')}`;
+                }).join('\n');
+
+                return {
+                    text: `Retrieved top ${chosen.length} chunk(s) from \`pgvector\` filtered by \`workspaceId == "${workspace.id}"\`:\n\n${snippets}`,
+                    citations: chosen.map(n => n.title)
+                };
+            }
+
+            if (command === 'summarize') {
+                const lines = payload.split('\n').filter(Boolean);
+                return {
+                    text: `**Meeting Minutes Summary (${lines.length} messages analyzed):**\n• **Architecture & RAG:** Polymorphic \`AiCommandHandler\` strategies (\`ask\`, \`summarize\`, \`tasks\`) are active and connected to \`pgvector\`.\n• **Inter-Service Sync:** \`chat-service\` communicates with \`ai-service:8083\` via OpenFeign \`AiClient\`.\n• **Deployment:** Docker Compose stack is running within the 5GB RAM server budget.`
+                };
+            }
+
+            if (command === 'tasks') {
+                return {
+                    text: 'Extracted Action Items from Channel Transcript:',
+                    tasksList: [
+                        { label: 'Induwara: Verify /api/ai/index and /api/ai/command inside Docker Compose stack', done: true },
+                        { label: 'Teammate B: Connect OpenFeign AiClient & ChatToNoteService in chat-service', done: true },
+                        { label: 'Teammate D: Verify Eureka service discovery & API Gateway routing on Dell Server', done: false },
+                        { label: 'Teammate E: Execute curl / Newman integration test suite across all endpoints', done: false }
+                    ]
+                };
+            }
+
+            return { text: `Unknown command '${command}'` };
+        }
+
+        function toggleTaskItem(msgId, taskIdx) {
+            const ws = getActiveWorkspace();
+            const ch = getActiveChannel();
+            const msg = (ws.messages[ch.id] || []).find(m => m.id === msgId);
+            if (msg && msg.tasksList && msg.tasksList[taskIdx]) {
+                msg.tasksList[taskIdx].done = !msg.tasksList[taskIdx].done;
+                renderChatMessages();
+            }
+        }
+
+        // ============================================================================
+        // 7. CHAT-TO-NOTE CONVERSION SERVICE (ChatToNoteService.java simulation)
+        // ============================================================================
+        function convertChatToNote() {
+            const ws = getActiveWorkspace();
+            const ch = getActiveChannel();
+            const msgs = ws.messages[ch.id] || [];
+
+            const transcript = msgs
+                .map(m => `${m.sender} (${m.time}): ${m.text}`)
+                .join('\n\n');
+
+            const newNoteId = `note-chat-${Date.now().toString().slice(-4)}`;
+            const newNote = {
+                id: newNoteId,
+                emoji: '💬',
+                title: `Chat Transcript: #${ch.name}`,
+                indexed: true,
+                lastIndexed: 'Auto-indexed via ChatToNoteService',
+                content: `Converted from #${ch.name} via com.notes.chat_service.conversion.ChatToNoteService\nRoom ID: ${ch.id}\n\n--- Transcript ---\n${transcript}`
+            };
+
+            ws.notes.unshift(newNote);
+            state.activeNoteId = newNoteId;
+            if (state.viewMode === 'chat') {
+                state.viewMode = 'split';
+            }
+
+            state.apiLogs.unshift({
+                id: 'log-' + Date.now(),
+                method: 'POST',
+                endpoint: 'http://localhost:8083/api/ai/index (via ChatToNoteService)',
+                handler: 'ChatToNoteService ➔ AiController.indexNote',
+                status: '200 OK',
+                latency: '31ms',
+                curl: `curl -X POST http://localhost:8083/api/ai/index -H "Content-Type: application/json" -d '{"pageId":"${newNoteId}","workspaceId":"${ws.id}","title":"${newNote.title}","content":"Converted room transcript..."}'`,
+                response: `{"status":"INDEXED","pageId":"${newNoteId}","title":"${newNote.title}"}`
+            });
+
+            renderAll();
+            showToast(`ChatToNoteService converted #${ch.name} into an indexed Notion note!`, 'emerald');
+        }
+
+        // ============================================================================
+        // 8. ACTUATOR HEALTH CHECK & DEVELOPER INSPECTOR UTILITIES
+        // ============================================================================
+        async function checkActuatorHealth() {
+            const badge = document.getElementById('actuatorBadgeText');
+            badge.textContent = 'Checking...';
+            const start = performance.now();
+            let healthJson = {
+                status: 'UP',
+                components: {
+                    db: { status: 'UP', details: { database: 'PostgreSQL', validationQuery: 'SELECT 1' } },
+                    ping: { status: 'UP' }
+                }
+            };
+            let statusStr = '200 OK';
+
+            if (state.connectionMode !== 'simulated') {
+                try {
+                    const res = await fetch('http://localhost:8083/actuator/health');
+                    if (res.ok) {
+                        healthJson = await res.json();
+                        statusStr = '200 OK (localhost:8083)';
+                    }
+                } catch (e) {
+                    statusStr = '200 OK (Simulated Actuator)';
+                }
+            }
+
+            const elapsed = `${Math.round(performance.now() - start)}ms`;
+            badge.textContent = `Actuator: ${healthJson.status || 'UP'} (${elapsed})`;
+
+            state.apiLogs.unshift({
+                id: 'log-' + Date.now(),
+                method: 'GET',
+                endpoint: 'http://localhost:8083/actuator/health',
+                handler: 'Spring Boot Actuator HealthEndpoint',
+                status: statusStr,
+                latency: elapsed,
+                curl: `curl -s http://localhost:8083/actuator/health`,
+                response: JSON.stringify(healthJson)
+            });
+
+            renderApiLogs();
+            showToast('Spring Boot Actuator Health: UP (PostgreSQL pgvector connected)', 'emerald');
+        }
+
+        function toggleInspectorDrawer() {
+            const drawer = document.getElementById('inspectorDrawer');
+            drawer.classList.toggle('hidden');
+        }
+
+        function clearApiLogs() {
+            state.apiLogs = [];
+            renderApiLogs();
+        }
+
+        function copyCurlCommand(index) {
+            const log = state.apiLogs[index];
+            if (!log) return;
+            const temp = document.createElement('textarea');
+            temp.value = log.curl;
+            document.body.appendChild(temp);
+            temp.select();
+            document.execCommand('copy');
+            document.body.removeChild(temp);
+            showToast('Copied cURL command to clipboard!', 'indigo');
+        }
+
+        function openArchitectureModal() {
+            document.getElementById('architectureModal').classList.remove('hidden');
+        }
+
+        function closeArchitectureModal() {
+            document.getElementById('architectureModal').classList.add('hidden');
+        }
+
+        // ============================================================================
+        // 9. FORMATTING & TOAST HELPERS
+        // ============================================================================
+        function escapeHtml(str) {
+            return String(str || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function escapeJsString(str) {
+            return String(str || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        }
+
+        function formatMarkdownText(str) {
+            return escapeHtml(str)
+                .replace(/\*\*(.+?)\*\*/g, '<strong class="text-white font-semibold">$1</strong>')
+                .replace(/`([^`]+)`/g, '<code class="bg-[#1e1f22] text-indigo-300 px-1.5 py-0.5 rounded font-mono text-[11px] border border-[#35373c]">$1</code>');
+        }
+
+        function showToast(message, color = 'indigo') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            const borderColors = {
+                indigo: 'border-indigo-500 bg-[#1e1f22] text-indigo-200',
+                emerald: 'border-emerald-500 bg-[#1e1f22] text-emerald-200',
+                amber: 'border-amber-500 bg-[#1e1f22] text-amber-200'
+            };
+            toast.className = `pointer-events-auto px-3.5 py-2 rounded-xl border-l-4 shadow-xl text-xs font-medium flex items-center space-x-2 transition-all duration-300 ${borderColors[color] || borderColors.indigo}`;
+            toast.innerHTML = `<span>✨</span><span>${escapeHtml(message)}</span>`;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3200);
+        }
+
+        // Initialize application on window load
+        window.onload = function () {
+            renderAll();
+        };
+    </script>
 </body>
 </html>
